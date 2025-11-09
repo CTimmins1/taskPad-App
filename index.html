@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>TaskPad (INSECURE)</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <div class="container">
+      <h1 class="brand"><a href="{{ url_for('index') }}">TaskPad <small>(INSECURE)</small></a></h1>
+      <nav class="nav">
+        <a href="{{ url_for('auth.register') }}">Register</a>
+        <a href="{{ url_for('auth.login') }}">Login</a>
+        <a href="{{ url_for('tasks.tasks') }}">Tasks</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container main">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="container footer">
+    <p>TaskPad demo for Secure Programming assignment — intentionally insecure branch.</p>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,22 @@
+{% extends "index.html" %}
+{% block content %}
+<div class="card">
+  <h2>{{ task['title'] }}</h2>
+  <p>{{ task['description'] }}</p>
+
+  <h3>Comments</h3>
+  <ul>
+    {% for c in comments %}
+      <!-- STORED XSS (INSECURE): comment body is rendered with |safe in insecure branch -->
+      <li class="comment-body">{{ c['body']|safe }}</li>
+    {% endfor %}
+  </ul>
+
+  <!-- Add comment form (posts to /task/<id>/comment) -->
+  <form action="/task/{{ task['id'] }}/comment" method="post">
+    <label for="body">Add comment</label>
+    <textarea id="body" name="body"></textarea>
+    <input type="submit" value="Add comment">
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends "index.html" %}
+{% block content %}
+<div class="card">
+  <h2>Tasks (INSECURE)</h2>
+
+  <!-- Search form: insecure branch will demonstrate SQL injection on the server side -->
+  <form action="/search" method="get" class="searchbar">
+    <input name="q" placeholder="Search tasks" value="{{ q|default('') }}">
+    <input type="submit" value="Search">
+  </form>
+
+  <!-- Banner area intentionally uses innerHTML in insecure branch (DOM XSS demo) -->
+  <div id="banner" class="banner"></div>
+
+  <ul class="tasks">
+    {% for r in rows %}
+      <li><a href="/task/{{ r['id'] }}">{{ r['title'] }}</a></li>
+    {% endfor %}
+  </ul>
+
+  <!-- REFLECTED XSS: the insecure branch intentionally uses |safe on the echoed query so you can demo reflected XSS -->
+  <p>Results for: {{ q|safe }}</p>
+
+</div>
+{% endblock %}
