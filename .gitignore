@@ -1,0 +1,12 @@
+# Python cache / venv
+__pycache__/
+*.pyc
+.venv/
+
+# Local DB + instance dir
+instance/
+*.sqlite3
+
+# Secrets and logs
+.env
+logs/

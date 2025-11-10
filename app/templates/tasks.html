@@ -22,4 +22,10 @@
   <p>Results for: {{ q|safe }}</p>
 
 </div>
+
+<script>
+  // INSECURE: writes user-controlled query param directly into innerHTML (DOM XSS demo)
+  document.getElementById('banner').innerHTML =
+    new URLSearchParams(location.search).get('q') || '';
+</script>
 {% endblock %}
