@@ -1,68 +1,71 @@
-# app/routes_auth.py — authentication endpoints (INTENTIONALLY INSECURE).
-# Insecure patterns shown for the assignment:
-#  - SHA1 password hashing (weak, no salt)
-#  - SQL built via string formatting (vulnerable to SQL injection)
+# Implements OWASP-compliant password handling using Werkzeug’s PBKDF2-HMAC-SHA256.
+# Fixes SQL injection vulnerabilities by using parameterized SQL queries.
+# Removes verbose error messages and logs events for accountability.
 
-from flask import Blueprint, render_template, request, redirect, url_for, session
-import hashlib
+from flask import Blueprint, render_template, request, redirect, url_for, session, current_app
+from werkzeug.security import generate_password_hash, check_password_hash
 from .db import get_db
 
 bp = Blueprint("auth", __name__, url_prefix="/")
 
 @bp.route("/register", methods=("GET", "POST"))
 def register():
-    """
-    Register a new user.
-    INSECURE: Weak hashing and SQL string formatting used on purpose.
-    """
+    # Registration endpoint (SECURE)
+    #  Uses parameterized SQL to prevent injection
+    #  Hashes passwords using PBKDF2 with unique salt (handled by Werkzeug)
+    #  Logs registration activity
     if request.method == "POST":
-        email = request.form.get("email", "").strip()
-        password = request.form.get("password", "")
+        email = (request.form.get("email") or "").strip().lower()
+        password = request.form.get("password") or ""
 
-        # INSECURE: SHA1 without salt (demonstration only)
-        password_hash = hashlib.sha1(password.encode()).hexdigest()
+        # Generate a salted PBKDF2-HMAC-SHA256 hash (OWASP compliant)
+        pw_hash = generate_password_hash(password)
 
         db = get_db()
-        # INSECURE: string formatting inserts user input directly into SQL
-        db.execute(
-            "INSERT INTO users (email, password_hash, display_name) "
-            "VALUES ('%s','%s','%s')" %
-            (email, password_hash, email.split("@")[0])
-        )
-        db.commit()
-        return redirect(url_for("auth.login"))
+        try:
+            db.execute(
+                "INSERT INTO users (email, password_hash, display_name) VALUES (?, ?, ?)",
+                (email, pw_hash, email.split("@")[0])
+            )
+            db.commit()
+            current_app.logger.info("User registered successfully: %s", email)
+            return redirect(url_for("auth.login"))
+        except Exception as e:
+            # Generic error message to avoid leaking DB structure
+            current_app.logger.warning("Registration failed for %s: %s", email, str(e))
+            return "Registration failed. Try again with a different email.", 400
 
     return render_template("register.html")
 
 @bp.route("/login", methods=("GET", "POST"))
 def login():
-    """
-    Log in a user.
-    INSECURE: Query uses string formatting so you can demo SQL injection.
-    """
+    # Login endpoint (SECURE)
+    #  Uses parameterized SQL for lookup
+    #  Uses constant-time hash comparison to verify passwords
+    #  Logs success and failure for monitoring
     if request.method == "POST":
-        email = request.form.get("email", "").strip()
-        password = request.form.get("password", "")
-
-        # Same weak hashing to compare with stored hash
-        password_hash = hashlib.sha1(password.encode()).hexdigest()
+        email = (request.form.get("email") or "").strip().lower()
+        password = request.form.get("password") or ""
 
         db = get_db()
-        # INSECURE: vulnerable to SQL injection
-        user = db.execute(
-            "SELECT * FROM users WHERE email = '%s' AND password_hash = '%s'" %
-            (email, password_hash)
-        ).fetchone()
+        user = db.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
 
-        if user:
+        if user and check_password_hash(user["password_hash"], password):
             session["user_id"] = user["id"]
+            current_app.logger.info("Login successful for: %s", email)
             return redirect(url_for("index"))
+
+        # Authentication failed – log attempt
+        current_app.logger.warning("Login failed for: %s", email)
         return "Invalid credentials", 401
 
     return render_template("login.html")
 
 @bp.route("/logout")
 def logout():
-    """Clear session and send user back to login page."""
+    # Logout endpoint (SECURE)
+    #  Clears the user session
+    #  Logs the logout event for traceability
     session.clear()
+    current_app.logger.info("User logged out.")
     return redirect(url_for("auth.login"))
